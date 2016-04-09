@@ -7,38 +7,54 @@
 	var pluginName = 'dashboard';
 
 	$.fn[pluginName] = function (options) {
+        var args = arguments;
 		this.each(function () {
 			var _this = $.data(this, pluginName);
-			if (typeof options === 'string') {
-				_this[options].apply(_this, {});
-			}
-			else {
-				return $.data(this, pluginName, new Dashboard(this, $.extend(true, {}, options)));
+			if (_this && typeof options === 'string') {
+				_this[options].apply(_this, Array.prototype.slice.call(args, 1));
+			} 
+            else if (_this && typeof options === 'object') {
+                _this['update'].apply(_this, [ options ]);
+            }
+			else if (!_this) {
+            	return $.data(this, pluginName, new Dashboard(this, $.extend(true, {}, options)));
 			}
 		});
 	};
 
 	var Dashboard = function (el, options) {
-
-		this.$element = $(el);
+		this.$element = $(document.createElement('div')).appendTo($(el));
 		this.options = options;
 		this.render();
 	};
 
-	Dashboard.prototype.update = function () {
+	Dashboard.prototype.update = function (options) {
+        if(options) {
+            this.options = options;
+        }
 		this.options.factory.update();
 		this.render();
 	};
-
+    
 	Dashboard.prototype.render = function () {
 
 		var data = this.options.factory.data;
-
-		var $wrapper = $('<div></div>');
-		for (i = 0; i < data.length; i++) {
-			$wrapper.append('<div class="item" style="background-color:' + data[i] + ';"></div>');
-		}
-		this.$element.empty().append($wrapper);
+        
+        var $el = this.$element;
+        var dif = data.length - $el.children().length;
+        
+        // diff
+        if(dif < 0) { $el.children('.item:lt(' + (-1*dif) + ')').remove(); }
+        if(dif > 0) { for(var i=0;i<dif;i++){ $el.append($(document.createElement('div')).addClass('item').data({ color: '' })); }}
+                
+        // update
+        var dl = 0;
+        $el.children().each(function() {
+           var d = data[dl++];
+           var $t = $(this); var td = $t.data();
+           if(td !== d){ $t.css({'background-color': d}); $t.data(d); }
+        });
+        
 	};
 
 })(jQuery, window, document);
